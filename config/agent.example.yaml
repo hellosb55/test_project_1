@@ -65,3 +65,53 @@ resource_limits:
   max_memory_mb: 50  # Maximum memory usage in MB
   check_interval: 60  # Check interval in seconds
   action_on_exceed: "log"  # Action: log, disable_collectors, or stop
+
+# Alerting configuration
+alerting:
+  # Enable/disable alerting system
+  enabled: false
+
+  # Alert evaluation interval in seconds
+  evaluation_interval: 30
+
+  # Path to alert rules file
+  alert_rules_file: "config/alerts.example.yaml"
+
+  # Send notifications when alerts are resolved
+  send_resolved_notifications: false
+
+  # Notification channels
+  channels:
+    # Email notifications via SMTP
+    email:
+      enabled: false
+      smtp_host: "smtp.gmail.com"
+      smtp_port: 587
+      smtp_user: "alerts@example.com"
+      smtp_password: ""  # Use environment variable EMAIL_PASSWORD
+      use_tls: true
+      from_address: "alerts@example.com"
+      to_addresses:
+        - "admin@example.com"
+
+    # Slack notifications via webhook
+    slack:
+      enabled: false
+      webhook_url: ""  # Use environment variable SLACK_WEBHOOK_URL
+      channel: "#alerts"
+      username: "Metrics Agent"
+      icon_emoji: ":rotating_light:"
+
+    # Custom webhook notifications
+    webhook:
+      enabled: false
+      url: "https://your-webhook-endpoint.example.com/alerts"
+      method: "POST"
+      headers: {}
+      timeout: 10
+
+  # Alert storage configuration
+  storage:
+    type: "sqlite"
+    sqlite_path: "./data/alerts.db"
+    retention_days: 30  # Keep alert history for 30 days

@@ -11,6 +11,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 메트릭 수집 지연 < 1초
 - 5개 수집기: CPU(5초), Memory(5초), Disk(5/30초), Network(5초), Process(10초)
 
+## 기술 스택
+
+### 1. Python 3.9+
+- 메인 프로그래밍 언어
+- 타입 힌팅, 비동기 지원, 성능 개선
+- 크로스 플랫폼 호환성 (Linux, macOS, Windows)
+
+### 2. psutil (5.9.8)
+- 시스템 리소스 모니터링 라이브러리
+- CPU, 메모리, 디스크, 네트워크, 프로세스 메트릭 수집
+- 크로스 플랫폼 지원으로 일관된 API 제공
+
+### 3. prometheus-client (0.20.0)
+- Prometheus 메트릭 수출 라이브러리
+- HTTP 서버 내장 (`/metrics` 엔드포인트)
+- Gauge, Counter 등 표준 메트릭 타입 지원
+- 스레드 안전성 보장
+
+### 4. PyYAML (6.0.1)
+- YAML 설정 파일 파싱
+- 사람이 읽기 쉬운 설정 관리
+- 환경 변수와 조합하여 유연한 설정 오버라이드
+
+### 5. pytest + 코드 품질 도구
+- **pytest (8.0.0)**: 테스트 프레임워크
+  - pytest-cov (4.1.0): 코드 커버리지 측정
+  - pytest-mock (3.12.0): 목 객체 지원
+- **black (24.1.1)**: 코드 포맷터 (일관된 스타일)
+- **flake8 (7.0.0)**: 린터 (PEP8 준수 검사)
+- **mypy (1.8.0)**: 정적 타입 체커 (타입 안전성)
+
 ## 실행 및 개발 명령어
 
 ### 에이전트 실행

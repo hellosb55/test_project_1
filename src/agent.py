@@ -5,7 +5,7 @@ import signal
 import threading
 import psutil
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from src.config.settings import load_config
 from src.utils.logger import setup_logger, get_logger
@@ -37,6 +37,11 @@ class Agent:
         self.collector_threads = []
         self.self_monitor_thread = None
 
+        # Alerting system
+        self.alert_manager = None
+        self.alert_evaluator = None
+        self.alert_evaluator_thread = None
+
         # Setup hostname
         if config['agent']['hostname'] == 'auto':
             self.hostname = get_hostname()
@@ -50,6 +55,10 @@ class Agent:
 
         # Initialize Prometheus exporter
         self.exporter = PrometheusExporter(config, self.collectors)
+
+        # Initialize alerting system (if enabled)
+        if config.get('alerting', {}).get('enabled', False):
+            self._init_alerting()
 
         # Setup signal handlers
         self._setup_signal_handlers()
@@ -77,6 +86,47 @@ class Agent:
 
         if not self.collectors:
             raise ValueError("No collectors enabled! Check your configuration.")
+
+    def _init_alerting(self):
+        """Initialize alerting system"""
+        try:
+            from src.alerts.alert_manager import AlertManager
+            from src.alerts.alert_evaluator import AlertEvaluator
+            from src.alerts.alert_rule import load_alert_rules
+            from src.alerts.storage.sqlite_storage import SQLiteStorage
+
+            self.logger.info("Initializing alerting system...")
+
+            # Initialize storage
+            storage_config = self.config['alerting']['storage']
+            storage = SQLiteStorage(storage_config)
+
+            # Initialize alert manager
+            self.alert_manager = AlertManager(
+                self.config['alerting'],
+                storage
+            )
+
+            # Load alert rules
+            rules_file = self.config['alerting'].get('alert_rules_file')
+            if rules_file:
+                rules = load_alert_rules(rules_file)
+            else:
+                rules = []
+                self.logger.warning("No alert rules file specified")
+
+            # Initialize alert evaluator
+            self.alert_evaluator = AlertEvaluator(
+                rules,
+                self.exporter.registry,
+                self.alert_manager
+            )
+
+            self.logger.info(f"Alerting system initialized with {len(rules)} rules")
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize alerting system: {e}", exc_info=True)
+            raise
 
     def _setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""
@@ -121,6 +171,16 @@ class Agent:
             self.self_monitor_thread.start()
             self.logger.info("Started self-monitoring thread")
 
+            # Start alert evaluator thread (if enabled)
+            if self.alert_evaluator:
+                self.alert_evaluator_thread = threading.Thread(
+                    target=self._run_alert_evaluator_loop,
+                    daemon=True,
+                    name="alert-evaluator"
+                )
+                self.alert_evaluator_thread.start()
+                self.logger.info("Started alert evaluator thread")
+
             self.logger.info("Agent started successfully")
             self.logger.info(f"Prometheus metrics available at http://{self.config['prometheus']['host']}:{self.config['prometheus']['port']}/metrics")
 
@@ -151,6 +211,14 @@ class Agent:
         # Wait for self-monitor thread
         if self.self_monitor_thread:
             self.self_monitor_thread.join(timeout=2)
+
+        # Wait for alert evaluator thread
+        if self.alert_evaluator_thread:
+            self.alert_evaluator_thread.join(timeout=2)
+
+        # Cleanup alert manager
+        if self.alert_manager:
+            self.alert_manager.shutdown()
 
         # Stop Prometheus exporter
         if self.exporter:
@@ -236,3 +304,31 @@ class Agent:
             except Exception as e:
                 self.logger.error(f"Error in self-monitoring: {e}")
                 time.sleep(check_interval)
+
+    def _run_alert_evaluator_loop(self):
+        """Run alert evaluator loop"""
+        interval = self.config['alerting']['evaluation_interval']
+
+        self.logger.debug(f"Starting alert evaluator loop (interval: {interval}s)")
+
+        while self.running:
+            try:
+                # Evaluate all rules
+                self.alert_evaluator.evaluate_all_rules()
+
+                # Cleanup old alerts (every 100 evaluations)
+                if hasattr(self, '_alert_cleanup_counter'):
+                    self._alert_cleanup_counter += 1
+                else:
+                    self._alert_cleanup_counter = 0
+
+                if self._alert_cleanup_counter >= 100:
+                    self.alert_manager.cleanup_old_alerts()
+                    self._alert_cleanup_counter = 0
+
+                # Sleep until next evaluation
+                time.sleep(interval)
+
+            except Exception as e:
+                self.logger.error(f"Error in alert evaluator loop: {e}", exc_info=True)
+                time.sleep(interval)

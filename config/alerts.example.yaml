@@ -1,0 +1,211 @@
+# Alert Rules Configuration Example
+# This file defines alert rules for the metrics monitoring agent
+
+alert_rules:
+  # High CPU usage alert
+  - name: "high_cpu_usage"
+    description: "CPU usage exceeds threshold for extended period"
+    metric_name: "cpu_usage_percent"
+    condition:
+      operator: ">"
+      threshold: 80.0
+    for_duration_minutes: 5
+    severity: "warning"
+    labels:
+      component: "system"
+      category: "performance"
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage is {{ value }}% (threshold: {{ threshold }}%)"
+    channels:
+      - email
+      - slack
+    cooldown_minutes: 15
+    enabled: true
+
+  # Critical CPU usage
+  - name: "critical_cpu_usage"
+    description: "CPU usage is critically high"
+    metric_name: "cpu_usage_percent"
+    condition:
+      operator: ">"
+      threshold: 95.0
+    for_duration_minutes: 2
+    severity: "critical"
+    labels:
+      component: "system"
+      category: "performance"
+    annotations:
+      summary: "CRITICAL: CPU usage extremely high"
+      description: "CPU usage is {{ value }}% (threshold: {{ threshold }}%)"
+    channels:
+      - email
+      - slack
+      - webhook
+    cooldown_minutes: 10
+    enabled: true
+
+  # High memory usage
+  - name: "high_memory_usage"
+    description: "Memory usage exceeds threshold"
+    metric_name: "memory_usage_percent"
+    condition:
+      operator: ">"
+      threshold: 85.0
+    for_duration_minutes: 5
+    severity: "warning"
+    labels:
+      component: "system"
+      category: "memory"
+    annotations:
+      summary: "High memory usage detected"
+      description: "Memory usage is {{ value }}% (threshold: {{ threshold }}%)"
+    channels:
+      - email
+      - slack
+    cooldown_minutes: 15
+    enabled: true
+
+  # Disk space low
+  - name: "disk_space_low"
+    description: "Disk usage exceeds threshold"
+    metric_name: "disk_usage_percent"
+    label_selector:
+      mount_point: "/"
+    condition:
+      operator: ">"
+      threshold: 85.0
+    for_duration_minutes: 10
+    severity: "warning"
+    labels:
+      component: "disk"
+      category: "storage"
+    annotations:
+      summary: "Disk space running low on {{ labels.mount_point }}"
+      description: "Disk usage on {{ labels.mount_point }} is {{ value }}% (threshold: {{ threshold }}%)"
+    channels:
+      - email
+      - slack
+    cooldown_minutes: 30
+    enabled: true
+
+  # Critical disk space
+  - name: "disk_space_critical"
+    description: "Disk usage is critically high"
+    metric_name: "disk_usage_percent"
+    label_selector:
+      mount_point: "/"
+    condition:
+      operator: ">"
+      threshold: 95.0
+    for_duration_minutes: 5
+    severity: "critical"
+    labels:
+      component: "disk"
+      category: "storage"
+    annotations:
+      summary: "CRITICAL: Disk space critically low on {{ labels.mount_point }}"
+      description: "Disk usage on {{ labels.mount_point }} is {{ value }}% (threshold: {{ threshold }}%)"
+    channels:
+      - email
+      - slack
+      - webhook
+    cooldown_minutes: 15
+    enabled: true
+
+  # High network errors
+  - name: "high_network_errors"
+    description: "Network errors exceed threshold"
+    metric_name: "network_errors_total"
+    condition:
+      operator: ">"
+      threshold: 100
+    for_duration_minutes: 5
+    severity: "warning"
+    labels:
+      component: "network"
+      category: "connectivity"
+    annotations:
+      summary: "High network errors detected on {{ labels.interface }}"
+      description: "Network interface {{ labels.interface }} has {{ value }} errors (threshold: {{ threshold }})"
+    channels:
+      - slack
+    cooldown_minutes: 20
+    enabled: true
+
+  # Collector unhealthy
+  - name: "collector_unhealthy"
+    description: "Collector has failed"
+    metric_name: "agent_collector_status"
+    condition:
+      operator: "=="
+      threshold: 0
+    for_duration_minutes: 1
+    severity: "critical"
+    labels:
+      component: "agent"
+      category: "health"
+    annotations:
+      summary: "Collector {{ labels.collector }} is unhealthy"
+      description: "The {{ labels.collector }} collector has stopped working properly"
+    channels:
+      - slack
+      - webhook
+    cooldown_minutes: 5
+    enabled: true
+
+  # High collector errors
+  - name: "high_collector_errors"
+    description: "Collector error rate is high"
+    metric_name: "agent_collector_errors_total"
+    condition:
+      operator: ">"
+      threshold: 10
+    for_duration_minutes: 5
+    severity: "warning"
+    labels:
+      component: "agent"
+      category: "health"
+    annotations:
+      summary: "High error rate for {{ labels.collector }} collector"
+      description: "The {{ labels.collector }} collector has {{ value }} errors"
+    channels:
+      - email
+    cooldown_minutes: 20
+    enabled: true
+
+# Channel configurations can also be specified here
+# (but should be overridden in main agent.yaml for security)
+channels:
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: "alerts@example.com"
+    smtp_password: "${EMAIL_PASSWORD}"  # Use environment variable
+    use_tls: true
+    from_address: "alerts@example.com"
+    to_addresses:
+      - "admin@example.com"
+      - "ops@example.com"
+
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"  # Use environment variable
+    channel: "#alerts"
+    username: "Metrics Agent"
+    icon_emoji: ":rotating_light:"
+
+  webhook:
+    enabled: false
+    url: "https://your-webhook-endpoint.example.com/alerts"
+    method: "POST"
+    headers:
+      Authorization: "Bearer ${WEBHOOK_TOKEN}"
+    timeout: 10
+
+# Storage configuration
+storage:
+  type: "sqlite"
+  sqlite_path: "./data/alerts.db"
+  retention_days: 30

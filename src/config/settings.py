@@ -55,6 +55,43 @@ def get_default_config() -> Dict[str, Any]:
             'check_interval': 60,
             'action_on_exceed': 'log',  # log, disable_collectors, or stop
         },
+        'alerting': {
+            'enabled': False,
+            'evaluation_interval': 30,
+            'alert_rules_file': None,
+            'send_resolved_notifications': False,
+            'channels': {
+                'email': {
+                    'enabled': False,
+                    'smtp_host': 'smtp.gmail.com',
+                    'smtp_port': 587,
+                    'smtp_user': '',
+                    'smtp_password': '',
+                    'use_tls': True,
+                    'from_address': '',
+                    'to_addresses': [],
+                },
+                'slack': {
+                    'enabled': False,
+                    'webhook_url': '',
+                    'channel': '#alerts',
+                    'username': 'Metrics Agent',
+                    'icon_emoji': ':rotating_light:',
+                },
+                'webhook': {
+                    'enabled': False,
+                    'url': '',
+                    'method': 'POST',
+                    'headers': {},
+                    'timeout': 10,
+                }
+            },
+            'storage': {
+                'type': 'sqlite',
+                'sqlite_path': './data/alerts.db',
+                'retention_days': 30,
+            }
+        },
     }
 
 
@@ -186,3 +223,50 @@ def validate_config(config: Dict):
     action = config['resource_limits']['action_on_exceed']
     if action not in valid_actions:
         raise ValueError(f"Invalid action_on_exceed: {action}. Must be one of {valid_actions}")
+
+    # Validate alerting config (if enabled)
+    if config.get('alerting', {}).get('enabled', False):
+        alerting = config['alerting']
+
+        # Check evaluation interval
+        eval_interval = alerting.get('evaluation_interval', 30)
+        if eval_interval <= 0:
+            raise ValueError(f"Invalid evaluation_interval: {eval_interval}. Must be > 0")
+
+        # Check at least one channel enabled
+        channels_enabled = any(
+            ch.get('enabled', False)
+            for ch in alerting['channels'].values()
+        )
+        if not channels_enabled:
+            import warnings
+            warnings.warn("Alerting enabled but no channels configured")
+
+        # Validate email channel
+        if alerting['channels']['email'].get('enabled'):
+            email = alerting['channels']['email']
+            required_email_fields = ['smtp_host', 'smtp_user', 'smtp_password', 'from_address', 'to_addresses']
+            for field in required_email_fields:
+                if not email.get(field):
+                    raise ValueError(f"Email channel enabled but {field} not set")
+            if not isinstance(email['to_addresses'], list) or len(email['to_addresses']) == 0:
+                raise ValueError("Email channel: to_addresses must be a non-empty list")
+
+        # Validate Slack channel
+        if alerting['channels']['slack'].get('enabled'):
+            if not alerting['channels']['slack'].get('webhook_url'):
+                raise ValueError("Slack channel enabled but webhook_url not set")
+
+        # Validate webhook channel
+        if alerting['channels']['webhook'].get('enabled'):
+            if not alerting['channels']['webhook'].get('url'):
+                raise ValueError("Webhook channel enabled but url not set")
+
+        # Validate storage
+        storage_type = alerting['storage'].get('type', 'sqlite')
+        if storage_type != 'sqlite':
+            raise ValueError(f"Unsupported storage type: {storage_type}. Only 'sqlite' is currently supported")
+
+        retention_days = alerting['storage'].get('retention_days', 30)
+        if retention_days < 1:
+            raise ValueError(f"Invalid retention_days: {retention_days}. Must be >= 1")
