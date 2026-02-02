@@ -1,0 +1,5 @@
+# Core dependencies
+psutil==5.9.8
+prometheus-client==0.20.0
+pyyaml==6.0.1
+python-json-logger==2.0.7

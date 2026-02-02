@@ -1,0 +1,67 @@
+# Metrics Collection Agent Configuration
+
+agent:
+  # Hostname (set to 'auto' for automatic detection)
+  hostname: "auto"
+
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: "INFO"
+
+  # Log file path (set to null for stdout only)
+  log_file: null
+
+  # Log format: text or json
+  log_format: "text"
+
+prometheus:
+  # Prometheus HTTP server port
+  port: 9100
+
+  # Bind address (0.0.0.0 for all interfaces)
+  host: "0.0.0.0"
+
+collectors:
+  # CPU metrics collector
+  cpu:
+    enabled: true
+    interval: 5  # Collection interval in seconds
+    per_cpu: true  # Collect per-core metrics
+
+  # Memory metrics collector
+  memory:
+    enabled: true
+    interval: 5
+
+  # Disk metrics collector
+  disk:
+    enabled: true
+    usage_interval: 30  # Disk usage collection interval
+    io_interval: 5  # Disk I/O collection interval
+    exclude_filesystems:
+      - tmpfs
+      - devtmpfs
+      - squashfs
+    exclude_mount_points:
+      - /snap
+
+  # Network metrics collector
+  network:
+    enabled: true
+    interval: 5
+    exclude_interfaces:
+      - lo  # Exclude loopback
+    collect_connections: true  # Collect connection states
+
+  # Process metrics collector
+  process:
+    enabled: true
+    interval: 10
+    top_n: 20  # Number of top processes to track
+    include_threads: false
+
+resource_limits:
+  # Agent's own resource usage limits
+  max_cpu_percent: 2.0  # Maximum CPU usage
+  max_memory_mb: 50  # Maximum memory usage in MB
+  check_interval: 60  # Check interval in seconds
+  action_on_exceed: "log"  # Action: log, disable_collectors, or stop

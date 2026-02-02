@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Write",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(pwd)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(pip:*)",
+      "Bash(uv:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(python:*)",
+      "Bash(code:*)",
+      "Bash(echo:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(which:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(gh repo delete:*)"
+    ],
+    "ask": [
+      "Bash(rm:*)"
+    ]
+  }
+}
